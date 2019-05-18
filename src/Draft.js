@@ -1,3 +1,4 @@
+import { Matrix } from 'transformation-matrix-js';
 import p5 from 'p5';
 // line: {
 //   type: 0
@@ -22,6 +23,11 @@ export default class Draft {
     this.tempEl = 0;
     this.elements = [[], []];
     this.sk = null;
+    this.interactionMap = [];
+    this.draftTranformMatrix = new Matrix(); // tranformation matrix for center of draft
+    this.transformMatrix = null; // matrix for transformations
+    this.negativeRotateMatrix = null; // matrix for negative rotation
+    this.rotateMatrix = null; // matrix for rotation
 
     // object for imported profile
     this.import = null;
@@ -137,11 +143,17 @@ export default class Draft {
     }
   }
 
-  render() {
+  render() { 
     // draw imported profile
     // apply first transformation
     if(!!this.import) { // if import not null
-      this.sk.applyMatrix(...this.import.matrices[0]);
+
+      if (this.transformMatrix) {
+        this.sk.applyMatrix(...this.transformMatrix.toArray());
+      }
+      if (this.rotateMatrix) {
+        this.sk.applyMatrix(...this.rotateMatrix.toArray());
+      }
 
       // draw profile and applying transformation matrices
       for(let i = 0; i < this.import.elements.length; i++) {
@@ -163,8 +175,41 @@ export default class Draft {
             this.import.elements[i].to
           );
         }
-        this.sk.applyMatrix(...this.import.matrices[i+1]);
+        // this.sk.applyMatrix(...this.import.matrices[i+1]);
       }
     }
+  }
+
+  makeProfileTransformMatrices(axisX, axisY, axisAngle) {
+    if (axisX || axisY) {
+      this.transformMatrix = Matrix.from(1, 0, 0, 1, axisX, axisY);
+    }
+    if (axisAngle) {
+      this.rotateMatrix = new Matrix().rotateDeg(axisAngle);
+      this.negativeRotateMatrix = new Matrix().rotateDeg(-axisAngle);
+    }
+  }
+
+  mouseMovedHandler() {
+    let cursorX = this.sk.mouseX;
+    let cursorY = this.sk.mouseY;
+    let draftCenterX = this.sk.width / 2;
+    let draftCenterY = this.sk.height / 2;
+
+    let newCenter = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(draftCenterX, draftCenterY);
+    let newCursor = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(cursorX, cursorY);
+
+    if (this.transformMatrix) {
+      newCenter = this.transformMatrix.applyToPoint(newCenter.x, newCenter.y);
+    }
+    if (this.negativeRotateMatrix) {
+      newCenter = this.negativeRotateMatrix.applyToPoint(newCenter.x, newCenter.y);
+      newCursor = this.negativeRotateMatrix.applyToPoint(newCursor.x, newCursor.y);
+    }
+
+    cursorX = newCursor.x - newCenter.x; 
+    cursorY = newCenter.y - newCursor.y; 
+    
+    console.log('relativeCursor', cursorX, cursorY);
   }
 }

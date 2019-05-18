@@ -47,7 +47,17 @@ export default {
       let r = this.R.split(',').map((el) => parseFloat(el));
       let a = this.A.split(',').map((el) => parseFloat(el));
 
+      l = [50, 0, 50, 0, 50];
+      r = [0, 40, 0, 40, 0];
+      a = [0, 90, 0, 90, 0];
+      this.axisX = 50;
+      this.axisY = 40;
+      this.axisAngle = 20;
+      this.axisCenter = 3.5;
+
+      this.draft.makeProfileTransformMatrices(this.axisX, this.axisY, this.axisAngle);
       let result = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY, this.axisAngle);
+      console.log(result);
       this.draft.import = JSON.parse(result);
     }
   }
