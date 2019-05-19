@@ -56,7 +56,7 @@ export default {
       this.axisCenter = 3.5;
 
       this.draft.makeProfileTransformMatrices(this.axisX, this.axisY, this.axisAngle);
-      let result = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY, this.axisAngle);
+      let result = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
       console.log(result);
       this.draft.import = JSON.parse(result);
     }

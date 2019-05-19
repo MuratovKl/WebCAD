@@ -3,30 +3,15 @@ import { Matrix } from 'transformation-matrix-js';
 import p5 from 'p5';
 
 export default class Converter {
-  static vectorsToPrimitives(l, r, a, ac, ax, ay, aa) {
+  static vectorsToPrimitives(l, r, a, ac, ax, ay) {
     let elements = [];
     let matrices = [];
     let startEl = Math.floor(ac) - 1;
     let startPos = ac - Math.floor(ac);
 
-    // matrix, that hold transformation history
+    // matrices, that hold transformation history
     let m = new Matrix();
-
-    // translate axis center to (ax, ay) and rotate to aa
-    let initialTransform = [1, 0, 0, 1, ax, ay];
-    let aaRad = aa * Math.PI / 180;
-    if(aa > 0) {
-      initialTransform[0] = Math.cos(aaRad);
-      initialTransform[1] = Math.sin(aaRad);
-      initialTransform[2] = -Math.sin(aaRad);
-      initialTransform[3] = Math.cos(aaRad);
-    } else if(aa < 0) {
-      initialTransform[0] = Math.cos(aaRad);
-      initialTransform[1] = -Math.sin(aaRad);
-      initialTransform[2] = Math.sin(aaRad);
-      initialTransform[3] = Math.cos(aaRad);
-    }
-    matrices.push(initialTransform);
+    let angleCorrection = 0;
 
     // case when axis center not in the edge of element
     if(startPos !== 0) {
@@ -49,17 +34,8 @@ export default class Converter {
           let trVector = p5.Vector.fromAngle(vAngle, vLength);
 
           // rotate clockwisee and translate to trVector
-          let trAngleRad = trAngle * Math.PI / 180;
-          matrices.push([
-            Math.cos(trAngleRad),
-            Math.sin(trAngleRad),
-            -Math.sin(trAngleRad),
-            Math.cos(trAngleRad),
-            trVector.x,
-            trVector.y
-          ]);
           m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
-
+          angleCorrection += trAngle;
         } else {
           from = 90 - (1 - startPos) * Math.abs(a[startEl]);
           to = 90 + startPos * Math.abs(a[startEl]);
@@ -69,16 +45,8 @@ export default class Converter {
           let trVector = p5.Vector.fromAngle(vAngle, vLength);
 
           // rotate counter clockwise and translate to trVector
-          let trAngleRad = trAngle * Math.PI / 180;
-          matrices.push([
-            Math.cos(trAngleRad),
-            -Math.sin(trAngleRad),
-            Math.sin(trAngleRad),
-            Math.cos(trAngleRad),
-            trVector.x,
-            trVector.y
-          ]);
           m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+          angleCorrection -= trAngle; 
         }
 
         elements.push({
@@ -98,7 +66,6 @@ export default class Converter {
         });
 
         // move axis for next element (moving to right)
-        matrices.push([1, 0, 0, 1, p1x, 0]);
         m.translateX(p1x);
       }
     }
@@ -110,14 +77,14 @@ export default class Converter {
           let from, to;
           let trAngle = Math.abs(a[i]); // angle rotate for
           let vLength = r[i] * Math.sqrt(2 - 2 * Math.cos(trAngle * Math.PI / 180)); // length of vector from isosceles triangle
-          let c = {
-            x: 0,
-            y: a[i] > 0 ? r[i] : -r[i]
-          };
+
+          let c = m.applyToPoint(0, a[i] > 0 ? r[i] : -r[i]);
 
           if(a[i] > 0) {
-            from = -90;
-            to = -90 + a[i];
+            // from = -90;
+            // to = -90 + a[i];
+            from = -90 + angleCorrection;
+            to = -90 + a[i] + angleCorrection;
 
             // calc transforms for next element (moving to the right)
             let vAngle = (90 - (180 - trAngle) / 2) * Math.PI / 180;
@@ -126,20 +93,14 @@ export default class Converter {
             // if element last - 1 translate to start position
             if(i !== l.length - 1) {
               // rotate clockwisee and translate to trVector
-              let trAngleRad = trAngle * Math.PI / 180;
-              matrices.push([
-                Math.cos(trAngleRad),
-                Math.sin(trAngleRad),
-                -Math.sin(trAngleRad),
-                Math.cos(trAngleRad),
-                trVector.x,
-                trVector.y
-              ]);
               m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+              angleCorrection += trAngle;
             }
           } else {
-            from = 90 - Math.abs(a[i]);
-            to = 90;
+            // from = 90 - Math.abs(a[i]);
+            // to = 90;
+            from = 90 - Math.abs(a[i]) + angleCorrection;
+            to = 90 + angleCorrection;
 
             // calc transforms for next element (moving to right)
             let vAngle = (-90 + (180 - trAngle) / 2) * Math.PI / 180;
@@ -148,16 +109,8 @@ export default class Converter {
             // if element last - 1 translate to start position
             if(i !== l.length - 1) {
               // rotate counter clockwise and translate to trVector
-              let trAngleRad = trAngle * Math.PI / 180;
-              matrices.push([
-                Math.cos(trAngleRad),
-                -Math.sin(trAngleRad),
-                Math.sin(trAngleRad),
-                Math.cos(trAngleRad),
-                trVector.x,
-                trVector.y
-              ]);
               m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+              angleCorrection -= trAngle;
             }
           }
           elements.push({
@@ -170,19 +123,12 @@ export default class Converter {
         } else { // current element - line
           elements.push({
             type: 0,
-            p0: {
-              x: 0,
-              y: 0
-            },
-            p1: {
-              x: l[i],
-              y: 0
-            }
+            p0: m.applyToPoint(0, 0),
+            p1: m.applyToPoint(l[i], 0)
           });
 
           // if element last - 1 translate to start position
           if(i !== l.length - 1) {
-            matrices.push([1, 0, 0, 1, l[i], 0]);
             m.translateX(l[i]);
           }
         }
@@ -201,12 +147,10 @@ export default class Converter {
           let trVector = p5.Vector.fromAngle(vAngle, vLength);
 
           // rotate counter clockwisee and translate to trVector
-
-          let m1 = m.inverse();
           m = new Matrix();
+          angleCorrection = 0;
           m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
-          m1.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
-          matrices.push(m1.toArray());
+          angleCorrection -= trAngle;
 
         } else {
           // calc transforms for next element (moving to left)
@@ -214,44 +158,37 @@ export default class Converter {
           let trVector = p5.Vector.fromAngle(vAngle, vLength);
 
           // rotate clockwise and translate to trVector
-
-          let m1 = m.inverse();
           m = new Matrix();
+          angleCorrection = 0;
           m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
-          m1.translate(trVector.x, trVector.y).rotateDeg(trAngle);
-          matrices.push(m1.toArray());
+          angleCorrection += trAngle;
         }
 
       } else { // start element - line
         let p0x = -l[startEl] * startPos;
         // move axis for next element (moving to left)
-        let m1 = m.inverse();
         m = new Matrix();
+        angleCorrection = 0;
         m.translateX(p0x);
-        m1.translateX(p0x);
-        matrices.push(m1.toArray());
       }
     } else {
-      matrices.push(m.inverse().toArray());
       m = new Matrix();
+      angleCorrection = 0;
     }
 
     // move to left
     if(ac > 2) {
       for(let i = Math.floor(ac - 2); i >= 0; i--) {
-        console.log(i);
         if(r[i] !== 0) { // current element - arc
           let from, to;
           let trAngle = Math.abs(a[i]); // angle rotate for
           let vLength = r[i] * Math.sqrt(2 - 2 * Math.cos(trAngle * Math.PI / 180)); // length of vector from isosceles triangle
-          let c = {
-            x: 0,
-            y: a[i] > 0 ? r[i] : -r[i]
-          };
+
+          let c = m.applyToPoint(0, a[i] > 0 ? r[i] : -r[i]);
 
           if(a[i] > 0) {
-            from = -90 - a[i];
-            to = -90;
+            from = -90 - a[i] + angleCorrection;
+            to = -90 + angleCorrection;
 
             // calc transforms for next element (moving to the left)
             let vAngle = (90 + (180 - trAngle) / 2) * Math.PI / 180;
@@ -260,23 +197,14 @@ export default class Converter {
             // if element last - 1 translate to start position
             if(i !== l.length - 1) {
               // rotate counter clockwisee and translate to trVector
-              let trAngleRad = trAngle * Math.PI / 180;
-              matrices.push([
-                Math.cos(trAngleRad),
-                -Math.sin(trAngleRad),
-                Math.sin(trAngleRad),
-                Math.cos(trAngleRad),
-                trVector.x,
-                trVector.y
-              ]);
               m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+              angleCorrection -= trAngle;
             } else {
-              matrices.push(m.inverse().toArray());
               m = Matrix.from(1, 0, 0, 1, ax, ay);
             }
           } else {
-            from = 90;
-            to = 90 + Math.abs(a[i]);
+            from = 90 + angleCorrection;
+            to = 90 + Math.abs(a[i]) + angleCorrection;
 
             // calc transforms for next element (moving to left)
             let vAngle = (-90 - (180 - trAngle) / 2) * Math.PI / 180;
@@ -285,22 +213,13 @@ export default class Converter {
             // if element 0 translate to start position
             if(i !== 0) {
               // rotate clockwise and translate to trVector
-              let trAngleRad = trAngle * Math.PI / 180;
-              matrices.push([
-                Math.cos(trAngleRad),
-                Math.sin(trAngleRad),
-                -Math.sin(trAngleRad),
-                Math.cos(trAngleRad),
-                trVector.x,
-                trVector.y
-              ]);
               m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+              angleCorrection += trAngle;
             } else {
-              matrices.push(m.inverse().toArray());
               m = new Matrix();
+              angleCorrection = 0;
             }
           }
-
           elements.push({
             type: 1,
             c,
@@ -311,22 +230,14 @@ export default class Converter {
         } else { // current element - line
           elements.push({
             type: 0,
-            p0: {
-              x: 0,
-              y: 0
-            },
-            p1: {
-              x: -l[i],
-              y: 0
-            }
+            p0: m.applyToPoint(0, 0),
+            p1: m.applyToPoint(-l[i], 0)
           });
 
           // if element 0 translate to start position
           if(i !== 0) {
-            matrices.push([1, 0, 0, 1, -l[i], 0]);
             m.translateX(-l[i]);
           } else {
-            matrices.push(m.inverse().toArray());
             m = new Matrix();
           }
         }

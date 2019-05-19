@@ -175,7 +175,6 @@ export default class Draft {
             this.import.elements[i].to
           );
         }
-        // this.sk.applyMatrix(...this.import.matrices[i+1]);
       }
     }
   }
@@ -209,7 +208,7 @@ export default class Draft {
 
     cursorX = newCursor.x - newCenter.x; 
     cursorY = newCenter.y - newCursor.y; 
-    
+
     console.log('relativeCursor', cursorX, cursorY);
   }
 }
