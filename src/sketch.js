@@ -1,4 +1,4 @@
-export const sketch = (draft) => {
+export const sketch = (draft, collisionDetector) => {
   return (sk) => {
     sk.setup = () => {
       let canvas = sk.createCanvas(sk.windowWidth, sk.windowHeight);
@@ -10,6 +10,7 @@ export const sketch = (draft) => {
       sk.fill(255);
       sk.textSize(16);
       draft.sk = sk;
+      collisionDetector.sk = sk;
       draft.draftTranformMatrix.translate(sk.width/2, sk.height/2).flipY();
     };
   

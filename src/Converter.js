@@ -35,6 +35,7 @@ export default class Converter {
 
           // rotate clockwisee and translate to trVector
           m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+          matrices.push(m.toArray());
           angleCorrection += trAngle;
         } else {
           from = 90 - (1 - startPos) * Math.abs(a[startEl]);
@@ -46,6 +47,7 @@ export default class Converter {
 
           // rotate counter clockwise and translate to trVector
           m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+          matrices.push(m.toArray());
           angleCorrection -= trAngle; 
         }
 
@@ -67,6 +69,7 @@ export default class Converter {
 
         // move axis for next element (moving to right)
         m.translateX(p1x);
+        matrices.push(m.toArray());
       }
     }
     
@@ -94,6 +97,7 @@ export default class Converter {
             if(i !== l.length - 1) {
               // rotate clockwisee and translate to trVector
               m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+              matrices.push(m.toArray());
               angleCorrection += trAngle;
             }
           } else {
@@ -110,6 +114,7 @@ export default class Converter {
             if(i !== l.length - 1) {
               // rotate counter clockwise and translate to trVector
               m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+              matrices.push(m.toArray());
               angleCorrection -= trAngle;
             }
           }
@@ -130,6 +135,7 @@ export default class Converter {
           // if element last - 1 translate to start position
           if(i !== l.length - 1) {
             m.translateX(l[i]);
+            matrices.push(m.toArray());
           }
         }
       }
@@ -150,6 +156,7 @@ export default class Converter {
           m = new Matrix();
           angleCorrection = 0;
           m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+          matrices.push(m.toArray());
           angleCorrection -= trAngle;
 
         } else {
@@ -161,6 +168,7 @@ export default class Converter {
           m = new Matrix();
           angleCorrection = 0;
           m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+          matrices.push(m.toArray());
           angleCorrection += trAngle;
         }
 
@@ -170,6 +178,7 @@ export default class Converter {
         m = new Matrix();
         angleCorrection = 0;
         m.translateX(p0x);
+        matrices.push(m.toArray());
       }
     } else {
       m = new Matrix();
@@ -198,6 +207,7 @@ export default class Converter {
             if(i !== l.length - 1) {
               // rotate counter clockwisee and translate to trVector
               m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+              matrices.push(m.toArray());
               angleCorrection -= trAngle;
             } else {
               m = Matrix.from(1, 0, 0, 1, ax, ay);
@@ -214,6 +224,7 @@ export default class Converter {
             if(i !== 0) {
               // rotate clockwise and translate to trVector
               m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+              matrices.push(m.toArray());
               angleCorrection += trAngle;
             } else {
               m = new Matrix();
@@ -237,6 +248,7 @@ export default class Converter {
           // if element 0 translate to start position
           if(i !== 0) {
             m.translateX(-l[i]);
+            matrices.push(m.toArray());
           } else {
             m = new Matrix();
           }

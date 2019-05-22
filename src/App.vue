@@ -21,6 +21,7 @@ import p5 from 'p5';
 import { sketch } from './sketch.js';
 import Draft from './Draft.js';
 import Converter from './Converter.js';
+import CollisionDetector from './CollisionDetector.js';
 
 export default {
   name: 'app',
@@ -28,6 +29,7 @@ export default {
     return {
       P5: null,
       draft: null,
+      collisionDetector: null,
       L: '',
       R: '',
       A: '',
@@ -39,7 +41,9 @@ export default {
   },
   mounted() {
     this.draft = new Draft();
-    this.P5 = new p5(sketch(this.draft));
+    this.collisionDetector = new CollisionDetector();
+    this.P5 = new p5(sketch(this.draft, this.collisionDetector));
+    this.draft.collisionDetector = this.collisionDetector;
   },
   methods: {
     importPorfile() {
@@ -56,9 +60,10 @@ export default {
       this.axisCenter = 3.5;
 
       this.draft.makeProfileTransformMatrices(this.axisX, this.axisY, this.axisAngle);
-      let result = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
+      let result = JSON.parse(Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY));
       console.log(result);
-      this.draft.import = JSON.parse(result);
+      this.draft.import = result;
+      this.draft.collisionMap = this.collisionDetector.buildCollisionMap(result.elements);
     }
   }
 }

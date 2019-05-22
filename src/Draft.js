@@ -23,7 +23,8 @@ export default class Draft {
     this.tempEl = 0;
     this.elements = [[], []];
     this.sk = null;
-    this.interactionMap = [];
+    this.collisionDetector = null;
+    this.collisionMap = null;
     this.draftTranformMatrix = new Matrix(); // tranformation matrix for center of draft
     this.transformMatrix = null; // matrix for transformations
     this.negativeRotateMatrix = null; // matrix for negative rotation
@@ -177,6 +178,27 @@ export default class Draft {
         }
       }
     }
+
+    // render collision map
+    if (!!this.collisionMap) {
+      for (let contour of this.collisionMap) {
+        if (contour.length === 4) {
+          this.sk.beginShape();
+          for (let point of contour) {
+            this.sk.vertex(point[0], point[1]);
+          }
+          this.sk.endShape(this.sk.CLOSE);
+        } else {
+          for (let quad of contour) {
+            this.sk.beginShape();
+            for (let point of quad) {
+              this.sk.vertex(point[0], point[1]);
+            }
+            this.sk.endShape(this.sk.CLOSE);
+          }
+        }
+      }
+    }
   }
 
   makeProfileTransformMatrices(axisX, axisY, axisAngle) {
@@ -207,8 +229,11 @@ export default class Draft {
     }
 
     cursorX = newCursor.x - newCenter.x; 
-    cursorY = newCenter.y - newCursor.y; 
+    cursorY = -(newCenter.y - newCursor.y); 
 
     console.log('relativeCursor', cursorX, cursorY);
+    if (!!this.collisionMap) {
+      console.log('collision', this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap));
+    }
   }
 }

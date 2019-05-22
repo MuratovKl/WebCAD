@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "p5": "^0.7.3",
+    "point-in-polygon": "^1.0.1",
     "transformation-matrix-js": "^2.7.6",
     "vue": "^2.6.6"
   },
