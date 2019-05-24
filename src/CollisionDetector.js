@@ -7,7 +7,7 @@ export default class CollisionDetector {
 
   buildCollisionMap(elements) {
     let collisionMap = [];
-    let offset = 5; // offset from original profile line
+    let offset = 10; // offset from original profile line
 
     // return if empty elements array passed
     if (!elements) {

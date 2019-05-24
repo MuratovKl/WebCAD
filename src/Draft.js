@@ -25,6 +25,7 @@ export default class Draft {
     this.sk = null;
     this.collisionDetector = null;
     this.collisionMap = null;
+    this.selectedElement = -1;
     this.draftTranformMatrix = new Matrix(); // tranformation matrix for center of draft
     this.transformMatrix = null; // matrix for transformations
     this.negativeRotateMatrix = null; // matrix for negative rotation
@@ -158,6 +159,13 @@ export default class Draft {
 
       // draw profile and applying transformation matrices
       for(let i = 0; i < this.import.elements.length; i++) {
+
+        if (this.selectedElement !== i) { // selected element with bigger weight
+          this.sk.strokeWeight(1);
+        } else {
+          this.sk.strokeWeight(3);
+        }
+
         if(this.import.elements[i].type === 0) {  // draw line
           this.sk.line(
             this.import.elements[i].p0.x,
@@ -176,29 +184,30 @@ export default class Draft {
             this.import.elements[i].to
           );
         }
+        this.sk.strokeWeight(1);
       }
     }
 
     // render collision map
-    if (!!this.collisionMap) {
-      for (let contour of this.collisionMap) {
-        if (contour.length === 4) {
-          this.sk.beginShape();
-          for (let point of contour) {
-            this.sk.vertex(point[0], point[1]);
-          }
-          this.sk.endShape(this.sk.CLOSE);
-        } else {
-          for (let quad of contour) {
-            this.sk.beginShape();
-            for (let point of quad) {
-              this.sk.vertex(point[0], point[1]);
-            }
-            this.sk.endShape(this.sk.CLOSE);
-          }
-        }
-      }
-    }
+    // if (!!this.collisionMap) {
+    //   for (let contour of this.collisionMap) {
+    //     if (contour.length === 4) {
+    //       this.sk.beginShape();
+    //       for (let point of contour) {
+    //         this.sk.vertex(point[0], point[1]);
+    //       }
+    //       this.sk.endShape(this.sk.CLOSE);
+    //     } else {
+    //       for (let quad of contour) {
+    //         this.sk.beginShape();
+    //         for (let point of quad) {
+    //           this.sk.vertex(point[0], point[1]);
+    //         }
+    //         this.sk.endShape(this.sk.CLOSE);
+    //       }
+    //     }
+    //   }
+    // }
   }
 
   makeProfileTransformMatrices(axisX, axisY, axisAngle) {
@@ -233,7 +242,7 @@ export default class Draft {
 
     console.log('relativeCursor', cursorX, cursorY);
     if (!!this.collisionMap) {
-      console.log('collision', this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap));
+      this.selectedElement = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap);
     }
   }
 }
