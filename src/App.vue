@@ -1,8 +1,6 @@
 <template>
   <div id="app">
-    <div id="canvas-wrapper">
-
-    </div>
+    <div id="canvas-wrapper"></div>
     <div id="sidebar">
       <button
         class="btn"
@@ -103,6 +101,48 @@
         </div>
       </div>
     </transition>
+    <transition>
+      <div v-show="isPartInfoVisible" class="part-params">
+        <label v-show="selectedLength > 0">
+          L:
+          <input
+            class="number-input"
+            v-model.number="selectedL"
+            type="number"
+          >
+        </label>
+        <label v-show="selectedRadius > 0">
+          R:
+          <input
+            class="number-input"
+            v-model.number="selectedR"
+            type="number"
+          >
+        </label>
+        <label v-show="selectedAngle > 0">
+          A:
+          <input
+            class="number-input"
+            v-model.number="selectedA"
+            type="number"
+          >
+        </label>
+        <div class="separator"></div>
+        <button
+          @click="rebuildProfile"
+          class="btn btn_action part-params__btn"
+        >
+          Применить
+        </button>
+        <br>
+        <button
+          @click="closePartParams"
+          class="btn part-params__btn"
+        >
+          Закрыть
+        </button>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -123,11 +163,16 @@ export default {
       L: [],
       R: [],
       A: [],
+      importedProfile: null,
       axisCenter: 0,
       axisX: 0,
       axisY: 0,
       axisAngle: 0,
       numberOfParts: '',
+      selectedElement: { index: -1 },
+      selectedL: '',
+      selectedR: '',
+      selectedA: '',
       isImportPopupVisible: false
     };
   },
@@ -136,6 +181,39 @@ export default {
     this.collisionDetector = new CollisionDetector();
     this.P5 = new p5(sketch(this.draft, this.collisionDetector));
     this.draft.collisionDetector = this.collisionDetector;
+    this.draft.selectedElement = this.selectedElement; 
+  },
+  computed: {
+    isPartInfoVisible() {
+      return this.selectedElement.index === -1 ? false : true;
+    },
+    selectedLength() {
+      if (this.selectedElement.index === -1) {
+        this.selectedL = -1;
+        return -1;
+      } else {
+        this.selectedL = this.L[this.selectedElement.index].value;
+        return this.L[this.selectedElement.index].value;
+      }
+    },
+    selectedRadius() {
+      if (this.selectedElement.index === -1) {
+        this.selectedR = -1;
+        return -1;
+      } else {
+        this.selectedR = this.R[this.selectedElement.index].value;
+        return this.R[this.selectedElement.index].value;
+      }
+    },
+    selectedAngle() {
+      if (this.selectedElement.index === -1) {
+        this.selectedA = -1;
+        return -1;
+      } else {
+        this.selectedA = this.A[this.selectedElement.index].value;
+        return this.A[this.selectedElement.index].value;
+      }
+    }
   },
   methods: {
     importPorfile() {
@@ -143,19 +221,20 @@ export default {
       let r = this.R.map((el) => el.value);
       let a = this.A.map((el) => el.value);
 
-      l = [50, 0, 50, 0, 50];
-      r = [0, 40, 0, 40, 0];
-      a = [0, 90, 0, 90, 0];
-      this.axisX = 50;
-      this.axisY = 40;
-      this.axisAngle = 20;
-      this.axisCenter = 3.5;
+      // l = [50, 0, 50, 0, 50];
+      // r = [0, 40, 0, 40, 0];
+      // a = [0, 90, 0, 90, 0];
+      // this.axisX = 50;
+      // this.axisY = 40;
+      // this.axisAngle = 20;
+      // this.axisCenter = 3.5;
 
       this.draft.makeProfileTransformMatrices(this.axisX, this.axisY, this.axisAngle);
-      let result = JSON.parse(Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY));
-      console.log(result);
-      this.draft.import = result;
-      this.draft.collisionMap = this.collisionDetector.buildCollisionMap(result.elements);
+      this.importedProfile = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
+      this.draft.import = this.importedProfile;
+      console.log(this.draft.import);
+      this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
+      this.draft.firstElementIndex = Math.floor(this.axisCenter) - 1;
       this.toggleImportPopup();
     },
     toggleImportPopup() {
@@ -180,6 +259,44 @@ export default {
         }
         return;
       }
+    },
+    closePartParams() {
+      this.selectedElement.index = -1;
+    },
+    isParamsChanged() {
+      if (this.selectedLength !== this.selectedL) {
+        return true;
+      }
+      if (this.selectedRadius !== this.selectedR) {
+        return true;
+      }
+      if (this.selectedAngle !== this.selectedA) {
+        return true;
+      }
+      return false;
+    },
+    rebuildProfile() {
+      if (!this.isParamsChanged()) {
+        return;
+      }
+      console.log('parametrs changed');
+      let elToChange = this.selectedElement.index;
+      this.L[elToChange].value = this.selectedL;
+      this.R[elToChange].value = this.selectedR;
+      this.A[elToChange].value = this.selectedA;
+
+      let l = this.L.map((el) => el.value);
+      let r = this.R.map((el) => el.value);
+      let a = this.A.map((el) => el.value);
+
+      if (elToChange === (Math.floor(this.axisCenter) - 1)) {
+        this.importedProfile = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
+        this.draft.import = this.importedProfile;
+      } else {
+        Converter.recalcProfile(l, r, a, this.axisCenter, this.importedProfile, elToChange);
+      }
+      this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
+      this.closePartParams();
     }
   }
 }
@@ -262,6 +379,9 @@ export default {
 
   .import-popup {
     min-width: 200px;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: scroll;
     padding: 10px;
     background-color: white;
     border-radius: 10px;
@@ -281,6 +401,20 @@ export default {
     height: 1px;
     background-color: #c3e3ff;
     margin: 10px 0;
+  }
+
+  .part-params {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    text-align: center;
+    border-radius: 10px;
+    background-color: white;
+
+    &__btn:first-of-type {
+      margin-bottom: 5px;
+    }
   }
 
 </style>

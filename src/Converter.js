@@ -6,6 +6,7 @@ export default class Converter {
   static vectorsToPrimitives(l, r, a, ac, ax, ay) {
     let elements = [];
     let matrices = [];
+    let angles = [];
     let startEl = Math.floor(ac) - 1;
     let startPos = ac - Math.floor(ac);
 
@@ -37,6 +38,7 @@ export default class Converter {
           m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
           matrices.push(m.toArray());
           angleCorrection += trAngle;
+          angles.push(angleCorrection);
         } else {
           from = 90 - (1 - startPos) * Math.abs(a[startEl]);
           to = 90 + startPos * Math.abs(a[startEl]);
@@ -49,6 +51,7 @@ export default class Converter {
           m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
           matrices.push(m.toArray());
           angleCorrection -= trAngle; 
+          angles.push(angleCorrection);
         }
 
         elements.push({
@@ -70,6 +73,7 @@ export default class Converter {
         // move axis for next element (moving to right)
         m.translateX(p1x);
         matrices.push(m.toArray());
+        angles.push(angleCorrection);
       }
     }
     
@@ -84,8 +88,6 @@ export default class Converter {
           let c = m.applyToPoint(0, a[i] > 0 ? r[i] : -r[i]);
 
           if(a[i] > 0) {
-            // from = -90;
-            // to = -90 + a[i];
             from = -90 + angleCorrection;
             to = -90 + a[i] + angleCorrection;
 
@@ -99,10 +101,9 @@ export default class Converter {
               m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
               matrices.push(m.toArray());
               angleCorrection += trAngle;
+              angles.push(angleCorrection);
             }
           } else {
-            // from = 90 - Math.abs(a[i]);
-            // to = 90;
             from = 90 - Math.abs(a[i]) + angleCorrection;
             to = 90 + angleCorrection;
 
@@ -116,6 +117,7 @@ export default class Converter {
               m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
               matrices.push(m.toArray());
               angleCorrection -= trAngle;
+              angles.push(angleCorrection);
             }
           }
           elements.push({
@@ -136,6 +138,7 @@ export default class Converter {
           if(i !== l.length - 1) {
             m.translateX(l[i]);
             matrices.push(m.toArray());
+            angles.push(angleCorrection);
           }
         }
       }
@@ -158,7 +161,7 @@ export default class Converter {
           m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
           matrices.push(m.toArray());
           angleCorrection -= trAngle;
-
+          angles.push(angleCorrection);
         } else {
           // calc transforms for next element (moving to left)
           let vAngle = (-90 - (180 - trAngle) / 2) * Math.PI / 180;
@@ -170,6 +173,7 @@ export default class Converter {
           m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
           matrices.push(m.toArray());
           angleCorrection += trAngle;
+          angles.push(angleCorrection);
         }
 
       } else { // start element - line
@@ -179,6 +183,7 @@ export default class Converter {
         angleCorrection = 0;
         m.translateX(p0x);
         matrices.push(m.toArray());
+        angles.push(angleCorrection);
       }
     } else {
       m = new Matrix();
@@ -203,12 +208,13 @@ export default class Converter {
             let vAngle = (90 + (180 - trAngle) / 2) * Math.PI / 180;
             let trVector = p5.Vector.fromAngle(vAngle, vLength);
 
-            // if element last - 1 translate to start position
-            if(i !== l.length - 1) {
+            // if element not first
+            if(i !== 0) {
               // rotate counter clockwisee and translate to trVector
               m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
               matrices.push(m.toArray());
               angleCorrection -= trAngle;
+              angles.push(angleCorrection);
             } else {
               m = Matrix.from(1, 0, 0, 1, ax, ay);
             }
@@ -226,6 +232,7 @@ export default class Converter {
               m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
               matrices.push(m.toArray());
               angleCorrection += trAngle;
+              angles.push(angleCorrection);
             } else {
               m = new Matrix();
               angleCorrection = 0;
@@ -249,6 +256,7 @@ export default class Converter {
           if(i !== 0) {
             m.translateX(-l[i]);
             matrices.push(m.toArray());
+            angles.push(angleCorrection);
           } else {
             m = new Matrix();
           }
@@ -256,9 +264,152 @@ export default class Converter {
       }
     }
 
-    return JSON.stringify({
+    return {
       elements,
-      matrices
-    });
+      matrices,
+      angles
+    };
+  }
+
+  static recalcProfile(l, r, a, ac, profile, index) {
+    let axisCenterIndex = Math.floor(ac - 1);
+    let matricesEndIndex = profile.matrices.length - 1
+    if (index > axisCenterIndex) {
+      let m = Matrix.from(...profile.matrices[index - Math.floor(ac)]);
+      let angleCorrection = profile.angles[index - Math.floor(ac)];
+      // move to right
+      for(let i = index; i < l.length; i++) {
+        let indexInMatrices = i - Math.floor(ac); // what tranformation matrix needs repalace
+        if(r[i] !== 0) { // current element - arc
+          let from, to;
+          let trAngle = Math.abs(a[i]); // angle rotate for
+          let vLength = r[i] * Math.sqrt(2 - 2 * Math.cos(trAngle * Math.PI / 180)); // length of vector from isosceles triangle
+
+          let c = m.applyToPoint(0, a[i] > 0 ? r[i] : -r[i]);
+
+          if(a[i] > 0) {
+            from = -90 + angleCorrection;
+            to = -90 + a[i] + angleCorrection;
+
+            // calc transforms for next element (moving to the right)
+            let vAngle = (90 - (180 - trAngle) / 2) * Math.PI / 180;
+            let trVector = p5.Vector.fromAngle(vAngle, vLength);
+
+            // if element not last
+            if(i !== l.length - 1) {
+              // rotate clockwisee and translate to trVector
+              m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+              profile.matrices[indexInMatrices + 1] = m.toArray();
+              angleCorrection += trAngle;
+              profile.angles[indexInMatrices + 1] = angleCorrection;
+            }
+          } else {
+            from = 90 - Math.abs(a[i]) + angleCorrection;
+            to = 90 + angleCorrection;
+
+            // calc transforms for next element (moving to right)
+            let vAngle = (-90 + (180 - trAngle) / 2) * Math.PI / 180;
+            let trVector = p5.Vector.fromAngle(vAngle, vLength);
+
+            // if element not last
+            if(i !== l.length - 1) {
+              // rotate counter clockwise and translate to trVector
+              m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+              profile.matrices[indexInMatrices + 1] = m.toArray();
+              angleCorrection -= trAngle;
+              profile.angles[indexInMatrices + 1] = angleCorrection;
+            }
+          }
+          profile.elements[indexInMatrices + 1] = {
+            type: 1,
+            c,
+            d: r[i] * 2,
+            from,
+            to
+          };
+        } else { // current element - line
+          profile.elements[indexInMatrices + 1] = {
+            type: 0,
+            p0: m.applyToPoint(0, 0),
+            p1: m.applyToPoint(l[i], 0)
+          };
+
+          // if element not last
+          if(i !== l.length - 1) {
+            m.translateX(l[i]);
+            profile.matrices[indexInMatrices + 1] = m.toArray();
+            profile.angles[indexInMatrices + 1] = angleCorrection;
+          }
+        }
+      }
+    } else {
+      let m = Matrix.from(...profile.matrices[matricesEndIndex - index]);
+      let angleCorrection = profile.angles[matricesEndIndex - index];
+      // move to left
+      for(let i = index; i >= 0; i--) {
+        let indexInMatrices = matricesEndIndex - i; // what tranformation matrix needs repalace
+        if(r[i] !== 0) { // current element - arc
+          let from, to;
+          let trAngle = Math.abs(a[i]); // angle rotate for
+          let vLength = r[i] * Math.sqrt(2 - 2 * Math.cos(trAngle * Math.PI / 180)); // length of vector from isosceles triangle
+
+          let c = m.applyToPoint(0, a[i] > 0 ? r[i] : -r[i]);
+
+          if(a[i] > 0) {
+            from = -90 - a[i] + angleCorrection;
+            to = -90 + angleCorrection;
+
+            // calc transforms for next element (moving to the left)
+            let vAngle = (90 + (180 - trAngle) / 2) * Math.PI / 180;
+            let trVector = p5.Vector.fromAngle(vAngle, vLength);
+
+            // if element not first
+            if(i !== 0) {
+              // rotate counter clockwisee and translate to trVector
+              m.translate(trVector.x, trVector.y).rotateDeg(-trAngle);
+              profile.matrices[indexInMatrices + 1] = m.toArray();
+              angleCorrection -= trAngle;
+              profile.angles[indexInMatrices + 1] = angleCorrection;
+            }
+          } else {
+            from = 90 + angleCorrection;
+            to = 90 + Math.abs(a[i]) + angleCorrection;
+
+            // calc transforms for next element (moving to left)
+            let vAngle = (-90 - (180 - trAngle) / 2) * Math.PI / 180;
+            let trVector = p5.Vector.fromAngle(vAngle, vLength);
+
+            // if element not first
+            if(i !== 0) {
+              // rotate clockwise and translate to trVector
+              m.translate(trVector.x, trVector.y).rotateDeg(trAngle);
+              profile.matrices[indexInMatrices + 1] = m.toArray();
+              angleCorrection += trAngle;
+              profile.angles[indexInMatrices + 1] = angleCorrection;
+            }
+          }
+          profile.elements[indexInMatrices + 1] = {
+            type: 1,
+            c,
+            d: r[i] * 2,
+            from,
+            to
+          };
+        } else { // current element - line
+          profile.elements[indexInMatrices + 1] = {
+            type: 0,
+            p0: m.applyToPoint(0, 0),
+            p1: m.applyToPoint(-l[i], 0)
+          };
+
+          // if element not first
+          if(i !== 0) {
+            m.translateX(-l[i]);
+            profile.matrices[indexInMatrices + 1] = m.toArray();
+            profile.angles[indexInMatrices + 1] = angleCorrection;
+          }
+        }
+      }
+    }
   }
 }

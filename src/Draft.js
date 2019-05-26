@@ -23,9 +23,11 @@ export default class Draft {
     this.tempEl = 0;
     this.elements = [[], []];
     this.sk = null;
+    this.firstElementIndex = -1; // position of first element of import in input vectors
     this.collisionDetector = null;
     this.collisionMap = null;
-    this.selectedElement = -1;
+    this.selectedElement = null; // element that selected by pressing the cursor
+    this.hoveredElement = -1; // element under cursor
     this.draftTranformMatrix = new Matrix(); // tranformation matrix for center of draft
     this.transformMatrix = null; // matrix for transformations
     this.negativeRotateMatrix = null; // matrix for negative rotation
@@ -156,14 +158,22 @@ export default class Draft {
       if (this.rotateMatrix) {
         this.sk.applyMatrix(...this.rotateMatrix.toArray());
       }
-
+      
+      let selected;
+      if (this.selectedElement.index === -1) {
+        selected = -1;
+      } else if (this.selectedElement.index >= this.firstElementIndex) {
+        selected = this.selectedElement.index - this.firstElementIndex;
+      } else {
+        selected = (this.import.elements.length - 1) - this.selectedElement.index;
+      }
       // draw profile and applying transformation matrices
       for(let i = 0; i < this.import.elements.length; i++) {
 
-        if (this.selectedElement !== i) { // selected element with bigger weight
-          this.sk.strokeWeight(1);
-        } else {
+        if (this.hoveredElement === i || selected === i) { // selected element with bigger weight
           this.sk.strokeWeight(3);
+        } else {
+          this.sk.strokeWeight(1);
         }
 
         if(this.import.elements[i].type === 0) {  // draw line
@@ -242,7 +252,24 @@ export default class Draft {
 
     console.log('relativeCursor', cursorX, cursorY);
     if (!!this.collisionMap) {
-      this.selectedElement = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap);
+      this.hoveredElement = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap);
+    }
+  }
+
+  mousePressedHandler() {
+    console.log('mouse press handler');
+    if (!!this.collisionMap && this.firstElementIndex !== -1) {
+      if (this.hoveredElement === -1) {
+        this.selectedElement.index = -1;
+        return;
+      }
+      let numberOfElements = this.collisionMap.length;
+      let rightPartLength = numberOfElements - (this.firstElementIndex + 1);
+      if (this.hoveredElement <= rightPartLength) {
+        this.selectedElement.index = this.firstElementIndex + this.hoveredElement;
+      } else {
+        this.selectedElement.index = numberOfElements - 1 - this.hoveredElement;
+      }
     }
   }
 }

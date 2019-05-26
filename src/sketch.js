@@ -3,7 +3,7 @@ export const sketch = (draft, collisionDetector) => {
     sk.setup = () => {
       let canvas = sk.createCanvas(sk.windowWidth, sk.windowHeight);
       canvas.parent("canvas-wrapper");
-      canvas.mousePressed(() => draft.eventHandler());
+      canvas.mousePressed(() => draft.mousePressedHandler());
       canvas.mouseMoved(() => draft.mouseMovedHandler());
       sk.frameRate(30);
       sk.background(1);
