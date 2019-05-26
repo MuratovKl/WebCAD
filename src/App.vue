@@ -73,7 +73,7 @@
             </label>
             <br>
             <label>
-              Положение системы координат:
+              Положение системы координат профиля:
               <input class="number-input" v-model.number="axisCenter" type="number">
             </label>
             <br>
