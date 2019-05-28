@@ -119,7 +119,7 @@
             type="number"
           >
         </label>
-        <label v-show="selectedAngle > 0">
+        <label v-show="selectedAngle !== 0">
           A:
           <input
             class="number-input"
