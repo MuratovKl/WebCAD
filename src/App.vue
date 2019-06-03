@@ -1,15 +1,49 @@
 <template>
-  <div id="app">
+  <div :class="{ 'pan-enabled': isPanEnabled }" id="app">
     <div id="canvas-wrapper"></div>
     <div id="sidebar">
+      <button
+        @click="startDrawing"
+        class="btn"
+        id="draw-btn"
+      >
+        Нарисовать профиль
+      </button>
       <button
         class="btn"
         id="import-btn"
         @click="toggleImportPopup"
       >
-        Импортировать профиль
+        Экспертный режим
       </button>
     </div>
+    <!-- popup for current hints -->
+    <div id="hint-popup">
+
+    </div>
+    <div id="position-bar">
+      <span id="current-zoom">{{ 'x' + currentZoom.value }}</span>
+      <button
+        @click="currentZoom.value += 0.5"
+        class="zoom-btn zoom-btn_plus"
+        :disabled="currentZoom.value >= 5"
+      >+</button>
+      <button
+        @click="currentZoom.value -= 0.5"
+        class="zoom-btn zoom-btn_minus"
+        :disabled="currentZoom.value <= 0.51"
+      >-</button>
+      <input v-model="isPanEnabled" id="enablePan" type="checkbox">
+      <label class="checkbox-label" for="enablePan">
+        <img class="checkbox-label__icon" src="./assets/move.svg">
+      </label>
+    </div>
+    <!-- general information bottom right corner -->
+    <div id="info-bar">
+      <p v-show="profileLength !== '0.00'">Длина профиля: {{ profileLength }}</p>
+    </div>
+
+    <!-- import profile popup -->
     <transition>
       <div v-show="isImportPopupVisible" id="overlay">
         <div class="import-popup">
@@ -25,43 +59,39 @@
             Подтвердить
           </button>
           <div class="separator"></div>
+          <section v-show="L.length !== 0" id="vectors">
+            <div>
+              <label class="vector-group">
+                Вектор L:
+                <input
+                  v-for="(el, index) of L"
+                  :key="index"
+                  v-model.number="el.value"
+                  class="number-input"
+                  type="number">
+              </label>
+              <label class="vector-group">
+                Вектор R:
+                <input
+                  v-for="(el, index) of R"
+                  :key="index"
+                  v-model.number="el.value"
+                  class="number-input"
+                  type="number">
+              </label>
+              <label class="vector-group">
+                Вектор A:
+                <input
+                  v-for="(el, index) of A"
+                  :key="index"
+                  v-model.number="el.value"
+                  class="number-input"
+                  type="number">
+              </label>
+            </div>
+          </section>
           <section v-show="L.length !== 0">
-            <label>
-              Вектор L:
-              <input
-                v-for="(el, index) of L"
-                :key="index"
-                v-model.number="el.value"
-                class="number-input"
-                type="number">
-            </label>
             <div class="separator"></div>
-          </section>
-          <section v-show="R.length !== 0">
-            <label>
-              Вектор R:
-              <input
-                v-for="(el, index) of R"
-                :key="index"
-                v-model.number="el.value"
-                class="number-input"
-                type="number">
-            </label>
-            <div class="separator"></div>
-          </section>
-          <section v-show="A.length !== 0">
-            <label>
-              Вектор A:
-              <input
-                v-for="(el, index) of A"
-                :key="index"
-                v-model.number="el.value"
-                class="number-input"
-                type="number">
-            </label>
-            <div class="separator"></div>
-          </section>
-          <section v-show="A.length !== 0">
             <label>
               Смещение по оси X:
               <input class="number-input" v-model.number="axisX" type="number">
@@ -101,6 +131,7 @@
         </div>
       </div>
     </transition>
+    <!-- profile element params popup -->
     <transition>
       <div v-show="isPartInfoVisible" class="part-params">
         <label v-show="selectedLength > 0">
@@ -143,6 +174,24 @@
         </button>
       </div>
     </transition>
+    <!-- confirm axis center popup -->
+    <div v-show="selectedAC.index !== -1" class="part-params">
+      <label >
+        Центр локальной системы координат:
+        <input
+          class="number-input"
+          v-model.number="selectedAC.index"
+          type="number"
+        >
+      </label>
+      <div class="separator"></div>
+      <button
+        @click="completeDrawing"
+        class="btn btn_action part-params__btn"
+      >
+        Подтвердить
+      </button>
+    </div>
   </div>
 </template>
 
@@ -152,9 +201,13 @@ import { sketch } from './sketch.js';
 import Draft from './Draft.js';
 import Converter from './Converter.js';
 import CollisionDetector from './CollisionDetector.js';
+import HintBar from './components/HintBar.vue';
 
 export default {
   name: 'app',
+  components: {
+    HintBar
+  },
   data() {
     return {
       P5: null,
@@ -170,10 +223,13 @@ export default {
       axisAngle: 0,
       numberOfParts: '',
       selectedElement: { index: -1 },
+      selectedAC: { index: -1 },
       selectedL: '',
       selectedR: '',
       selectedA: '',
-      isImportPopupVisible: false
+      isImportPopupVisible: false,
+      currentZoom: { value: 1 },
+      isPanEnabled: false
     };
   },
   mounted() {
@@ -181,9 +237,28 @@ export default {
     this.collisionDetector = new CollisionDetector();
     this.P5 = new p5(sketch(this.draft, this.collisionDetector));
     this.draft.collisionDetector = this.collisionDetector;
-    this.draft.selectedElement = this.selectedElement; 
+    this.draft.selectedElement = this.selectedElement;
+    this.draft.drawingAxisCenterSelected = this.selectedAC;
+    this.draft.currentZoom = this.currentZoom;
+  },
+  watch: {
+    isPanEnabled() {
+      console.log('pan');
+      this.draft.isPanning = this.isPanEnabled;
+    }
   },
   computed: {
+    profileLength() {
+      let len = 0;
+      for (let i = 0; i < this.L.length; i++) {
+        if (this.L[i].value !== 0) {
+          len += this.L[i].value;
+        } else {
+          len += Math.PI * this.R[i].value * this.A[i].value / 180;
+        }
+      }
+      return len.toFixed(2);
+    },
     isPartInfoVisible() {
       return this.selectedElement.index === -1 ? false : true;
     },
@@ -220,21 +295,16 @@ export default {
       let l = this.L.map((el) => el.value);
       let r = this.R.map((el) => el.value);
       let a = this.A.map((el) => el.value);
-
-      // l = [50, 0, 50, 0, 50];
-      // r = [0, 40, 0, 40, 0];
-      // a = [0, 90, 0, 90, 0];
-      // this.axisX = 50;
-      // this.axisY = 40;
-      // this.axisAngle = 20;
-      // this.axisCenter = 3.5;
-
+      this.draft.l = l;
+      this.draft.r = r;
+      this.draft.a = a;
       this.draft.makeProfileTransformMatrices(this.axisX, this.axisY, this.axisAngle);
       this.importedProfile = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
       this.draft.import = this.importedProfile;
       console.log(this.draft.import);
       this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
       this.draft.firstElementIndex = Math.floor(this.axisCenter) - 1;
+      this.draft.calcInfoPositions();
       this.toggleImportPopup();
     },
     toggleImportPopup() {
@@ -297,6 +367,40 @@ export default {
       }
       this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
       this.closePartParams();
+    },
+    startDrawing() {
+      this.draft.isDrawing = true;
+    },
+    completeDrawing() {
+      let axisParams = this.draft.calcDrawingAxisPos();
+      this.axisCenter = this.selectedAC.index;
+      this.axisAngle = axisParams.aa;
+      this.axisX = axisParams.ax;
+      this.axisY = axisParams.ay;
+
+      let vectors = Converter.primirivesToVectors(this.draft.drawing, this.draft.sk);
+      this.L = vectors.l;
+      this.R = vectors.r;
+      this.A = vectors.a;
+      this.numberOfParts = this.L.length;
+
+      this.draft.drawing = [];
+      this.draft.drawingDots = [];
+      this.draft.drawingCollisionMap = null;
+      this.selectedAC.index = -1;
+
+      let l = this.L.map((el) => el.value);
+      let r = this.R.map((el) => el.value);
+      let a = this.A.map((el) => el.value);
+      this.draft.l = l;
+      this.draft.r = r;
+      this.draft.a = a;
+      this.draft.makeProfileTransformMatrices(this.axisX, this.axisY, this.axisAngle);
+      this.importedProfile = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
+      this.draft.import = this.importedProfile;
+      this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
+      this.draft.firstElementIndex = Math.floor(this.axisCenter) - 1;
+      this.draft.calcInfoPositions();
     }
   }
 }
@@ -322,6 +426,10 @@ export default {
     top: 0;
     left: 0;
     padding: 20px;
+
+    & button {
+      margin-bottom: 10px;
+    }
   }
 
   .btn {
@@ -363,8 +471,6 @@ export default {
     border: 1px solid #c3e3ff;
   }
 
-
-
   #overlay {
     display: flex;
     position: absolute;
@@ -378,7 +484,6 @@ export default {
   }
 
   .import-popup {
-    min-width: 200px;
     max-width: 500px;
     max-height: 90vh;
     overflow-y: scroll;
@@ -403,6 +508,16 @@ export default {
     margin: 10px 0;
   }
 
+  #vectors {
+    display: flex;
+    justify-content: center;
+  }
+
+  .vector-group {
+    display: inline-flex;
+    flex-direction: column;
+  }
+
   .part-params {
     position: absolute;
     top: 10px;
@@ -414,6 +529,97 @@ export default {
 
     &__btn:first-of-type {
       margin-bottom: 5px;
+    }
+  }
+
+  #position-bar {
+    position: absolute;
+    top: calc(50vh - 45px);
+    right: 20px;
+    width: 40px;
+    text-align: center;
+  }
+
+  .zoom-btn {
+    display: block;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background-color: white;
+    font-size: 20px;
+
+    &:not(:disabled) {
+      cursor: pointer;
+      &:hover {
+        background-color: #c3e3ff;
+      }
+    }
+
+    &:disabled {
+      background-color: #fafafa;
+    }
+
+    &_plus {
+      border-radius: 15px 15px 0 0;
+      border-bottom: solid 1px #c3e3ff;
+    }
+
+    &_minus {
+      border-radius: 0 0 15px 15px;
+      border-top: solid 1px #c3e3ff;
+      margin-bottom: 5px;
+      padding-bottom: 5px;
+    }
+  }
+
+  #current-zoom {
+    display: inline-block;
+    margin-bottom: 5px;
+    padding-right: 8px;
+    color: white;
+  }
+
+  .checkbox-label {
+    display: block;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    padding-top: 3px;
+    box-sizing: border-box;
+    background-color: white;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #c3e3ff;
+    }
+
+    &__icon {
+      width: 25px;
+    }
+  }
+
+  #enablePan {
+    display: none;
+
+    &:checked + label {
+      background-color: darken(#c3e3ff, 20);
+    }
+  }
+
+  .pan-enabled {
+    cursor: all-scroll;
+  }
+
+  #info-bar {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    padding: 20px;
+
+    & > p {
+      font-size: 12px;
+      margin: 0;
+      color: white;
     }
   }
 

@@ -412,4 +412,32 @@ export default class Converter {
       }
     }
   }
+  
+  static primirivesToVectors(elements, sk) {
+    let l = [];
+    let r = [];
+    let a = [];
+
+    for (let element of elements) {
+      if (element.type === 0) {
+        let p0v = sk.createVector(element.p0.x, element.p0.y);
+        let p1v = sk.createVector(element.p1.x, element.p1.y);
+        let len = p5.Vector.dist(p0v, p1v);
+        l.push({ value: len });
+        r.push({ value: 0 });
+        a.push({ value: 0 });
+      } else {
+        let angle = element.to - element.from;
+        console.log('to', element.to);
+        console.log('from', element.from);
+        console.log('toRad', sk.radians(element.to));
+        console.log('fromRad', element.from);
+        l.push({ value:0 });
+        r.push({ value: element.d / 2 });
+        a.push({ value: angle });
+      }
+    }
+
+    return { l, r, a };
+  }
 }

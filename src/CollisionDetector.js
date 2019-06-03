@@ -53,6 +53,28 @@ export default class CollisionDetector {
     return collisionMap;
   }
 
+  buildDrawingCollisionMap(elements) {
+    let collisionMap = [];
+    let offset = 10;
+
+    // return if empty elements array passed
+    if (!elements) {
+      return collisionMap;
+    }
+
+    for (let element of elements) {
+      let p1, p2, p3, p4;
+      let el = [];
+      p1 = [element.x - offset, element.y + offset];
+      p2 = [element.x + offset, element.y + offset];
+      p3 = [element.x + offset, element.y - offset];
+      p4 = [element.x - offset, element.y - offset];
+      el.push(p1, p2, p3, p4);
+      collisionMap.push(el);
+    }
+    return collisionMap;
+  }
+
   findParallelLine(line, offset, direction) {
     let v0 = this.sk.createVector(line.p0.x, line.p0.y);
     let v1 = this.sk.createVector(line.p1.x, line.p1.y);

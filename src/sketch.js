@@ -3,8 +3,13 @@ export const sketch = (draft, collisionDetector) => {
     sk.setup = () => {
       let canvas = sk.createCanvas(sk.windowWidth, sk.windowHeight);
       canvas.parent("canvas-wrapper");
+
+      // mouse and keyboard handlers
       canvas.mousePressed(() => draft.mousePressedHandler());
       canvas.mouseMoved(() => draft.mouseMovedHandler());
+      canvas.mouseReleased(() => draft.mouseReleasedHandler());
+      sk.keyPressed = draft.keyPressedHandler.bind(draft);
+
       sk.frameRate(30);
       sk.background(1);
       sk.fill(255);
@@ -19,19 +24,22 @@ export const sketch = (draft, collisionDetector) => {
       sk.angleMode(sk.DEGREES);
       
       sk.applyMatrix(...draft.draftTranformMatrix.toArray());
+      sk.translate(draft.panX, draft.panY);
+      sk.translate(draft.tmpPanX, draft.tmpPanY);
 
       sk.stroke(0, 255, 0); // green line Y
       sk.line(0, 0, 0, 40);
       sk.stroke(255, 0, 0); // red line X
       sk.line(0, 0, 40, 0);
 
+      sk.scale(draft.currentZoom.value);
 
       sk.stroke(255);
       draft.render();
       sk.stroke(0, 255, 0); // green line Y
-      sk.line(0, 0, 0, 40);
+      sk.line(0, 0, 0, 40 / draft.currentZoom.value);
       sk.stroke(255, 0, 0); // red line X
-      sk.line(0, 0, 40, 0);
+      sk.line(0, 0, 40 / draft.currentZoom.value, 0);
     };
   
     sk.windowResized = () => {
