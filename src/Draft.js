@@ -1,5 +1,4 @@
 import { Matrix } from 'transformation-matrix-js';
-import Converter from './Converter.js';
 import p5 from 'p5';
 // line: {
 //   type: 0
@@ -170,7 +169,9 @@ export default class Draft {
 
   render() {
     if (!!this.tmpEl) {
-      let invertMatrix = this.draftTranformMatrix.inverse();
+      let invertMatrix = this.draftTranformMatrix.clone()
+        .translate(this.panX + this.tmpPanX, this.panY + this.tmpPanY)
+        .scaleU(this.currentZoom.value).inverse();
       let { x, y } = invertMatrix.applyToPoint(this.sk.mouseX, this.sk.mouseY);
       this.sk.line(this.tmpEl.p0.x, this.tmpEl.p0.y, x, y);
     }
@@ -207,7 +208,7 @@ export default class Draft {
     // this.renderDrawingCollisionMap();
 
     // render collision map
-    // this.renderCollisionMap();
+    this.renderCollisionMap();
   }
 
   renderProfileParams() {
@@ -292,7 +293,7 @@ export default class Draft {
   renderCollisionMap() {
     if (!!this.collisionMap) {
       for (let contour of this.collisionMap) {
-        if (contour.length === 4) {
+        if (contour[0].length === 2) {
           this.sk.beginShape();
           for (let point of contour) {
             this.sk.vertex(point[0], point[1]);
@@ -364,15 +365,15 @@ export default class Draft {
     let draftCenterY = this.sk.height / 2 - this.panY - this.tmpPanY;
     let newCenter, newCursor;
 
-    let scaleMatrix = new Matrix().scale(this.currentZoom.value, this.currentZoom.value);
+    let scaleMatrix = new Matrix().scaleU(this.currentZoom.value);
 
     newCenter = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(draftCenterX, draftCenterY);
     newCursor = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(cursorX, cursorY);
 
-
     if (this.transformMatrix) {
       newCenter = this.transformMatrix.applyToPoint(newCenter.x, newCenter.y);
     }
+
     if (this.negativeRotateMatrix) {
       newCenter = this.negativeRotateMatrix.applyToPoint(newCenter.x, newCenter.y);
       newCursor = this.negativeRotateMatrix.applyToPoint(newCursor.x, newCursor.y);
@@ -385,14 +386,15 @@ export default class Draft {
     if (!!this.collisionMap) {
       this.hoveredElement = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap);
     }
-
     if (!!this.drawingCollisionMap) {
       this.drawingAxisCenterHovered = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.drawingCollisionMap);
     }
   }
 
   drawElement() {
-    let invertMatrix = this.draftTranformMatrix.inverse();
+    let invertMatrix = this.draftTranformMatrix.clone()
+      .translate(this.panX + this.tmpPanX, this.panY + this.tmpPanY)
+      .scaleU(this.currentZoom.value).inverse();
     let { x, y } = invertMatrix.applyToPoint(this.sk.mouseX, this.sk.mouseY);
     let point = this.sk.createVector(x, y);
     // if line not started
@@ -524,6 +526,7 @@ export default class Draft {
   }
   // position for information about profile parts
   calcInfoPositions() {
+    this.sizesPos = [];
     let numberOfElements = this.import.elements.length;
     let rightPart = numberOfElements - this.firstElementIndex - 1;
     let elements = this.import.elements;

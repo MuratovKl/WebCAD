@@ -366,6 +366,7 @@ export default {
         Converter.recalcProfile(l, r, a, this.axisCenter, this.importedProfile, elToChange);
       }
       this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
+      this.draft.calcInfoPositions();
       this.closePartParams();
     },
     startDrawing() {
