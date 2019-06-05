@@ -26,9 +26,7 @@ export default class CollisionDetector {
         let arcCenter = this.sk.createVector(element.c.x, element.c.y);
         let arcAngle = Math.abs(element.to - element.from);
         let stepsNumber = Math.floor(Math.max(3, arcAngle / 15)); // point every 15 deg but min 3 point
-        console.log('steps', stepsNumber);
         let angleStep = arcAngle / stepsNumber;
-        console.log('angle step', angleStep);
         for (let i = 0; i <= stepsNumber; i++) {
           let smallRadialVector = p5.Vector.fromAngle(
             this.sk.radians(element.from + angleStep * i), 
@@ -40,8 +38,6 @@ export default class CollisionDetector {
           );
           let innerPoint = p5.Vector.add(arcCenter, smallRadialVector);
           let outerPoint = p5.Vector.add(arcCenter, bigRadialVector);
-          console.log('inner', innerPoint);
-          console.log('outer', outerPoint);
           innerLine.push([ innerPoint.x, innerPoint.y ]);
           outerLine.push([ outerPoint.x, outerPoint.y ]);
           if (innerLine.length === 2) {
@@ -92,7 +88,7 @@ export default class CollisionDetector {
 
   checkCollisions(point, collisionMap) {
     for (let i = 0; i < collisionMap.length; i++) {
-      if (collisionMap[i][0] === 2) {
+      if (collisionMap[i][0].length === 2) {
         if (this.isPointInPolygon(point, collisionMap[i])) {
           return i;
         }

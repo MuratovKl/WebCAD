@@ -418,7 +418,8 @@ export default class Converter {
     let r = [];
     let a = [];
 
-    for (let element of elements) {
+    for (let i = 0; i < elements.length; i++) {
+      let element = elements[i];
       if (element.type === 0) {
         let p0v = sk.createVector(element.p0.x, element.p0.y);
         let p1v = sk.createVector(element.p1.x, element.p1.y);
@@ -427,17 +428,26 @@ export default class Converter {
         r.push({ value: 0 });
         a.push({ value: 0 });
       } else {
-        let angle = element.to - element.from;
-        console.log('to', element.to);
-        console.log('from', element.from);
-        console.log('toRad', sk.radians(element.to));
-        console.log('fromRad', element.from);
+        let from = element.from < 0 ? 360 + element.from : element.from;
+        let to = element.to < 0 ? 360 + element.to : element.to;
+        if (to < from) {
+          to += 360;
+        }
+        let angle = to - from;
+        let prevLine = elements[i - 1];
+        let nextLine = elements[i + 1];
+        let p01 = sk.createVector(prevLine.p0.x, prevLine.p0.y);
+        let p11 = sk.createVector(prevLine.p1.x, prevLine.p1.y);
+        let p02 = sk.createVector(nextLine.p0.x, nextLine.p0.y);
+        let p12 = sk.createVector(nextLine.p1.x, nextLine.p1.y);
+        let prevLineV = p5.Vector.sub(p11, p01);
+        let nextLineV = p5.Vector.sub(p12, p02);
+        let cross = p5.Vector.cross(prevLineV, nextLineV);
         l.push({ value:0 });
         r.push({ value: element.d / 2 });
-        a.push({ value: angle });
+        a.push({ value: cross.z < 0 ? -angle : angle });
       }
     }
-
     return { l, r, a };
   }
 }
