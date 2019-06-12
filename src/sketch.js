@@ -44,10 +44,5 @@ export const sketch = (draft, collisionDetector) => {
     sk.windowResized = () => {
       sk.resizeCanvas(sk.windowWidth, sk.windowHeight);
     };
-  
-    sk.keyPressed = () => {
-      console.log('key pressed');
-      draft.eventHandler(sk.keyCode);
-    };
   }
 }

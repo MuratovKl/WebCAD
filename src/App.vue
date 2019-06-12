@@ -7,7 +7,7 @@
         class="btn"
         id="draw-btn"
       >
-        Нарисовать профиль
+        Построить профиль
       </button>
       <button
         class="btn"
@@ -366,6 +366,9 @@ export default {
       let l = this.L.map((el) => el.value);
       let r = this.R.map((el) => el.value);
       let a = this.A.map((el) => el.value);
+      this.draft.l = l;
+      this.draft.r = r;
+      this.draft.a = a;
 
       if (elToChange === (Math.floor(this.axisCenter) - 1)) {
         this.importedProfile = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);

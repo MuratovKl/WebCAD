@@ -57,7 +57,7 @@ export default class Converter {
         elements.push({
           type: 1,
           c,
-          d: r[startEl] * 2,
+          d: r[startEl] * 1.99,
           from,
           to
         });
@@ -123,7 +123,7 @@ export default class Converter {
           elements.push({
             type: 1,
             c,
-            d: r[i] * 2,
+            d: r[i] * 1.99,
             from,
             to
           });
@@ -241,7 +241,7 @@ export default class Converter {
           elements.push({
             type: 1,
             c,
-            d: r[i] * 2,
+            d: r[i] * 1.99,
             from,
             to
           });
@@ -440,8 +440,8 @@ export default class Converter {
         let p11 = sk.createVector(prevLine.p1.x, prevLine.p1.y);
         let p02 = sk.createVector(nextLine.p0.x, nextLine.p0.y);
         let p12 = sk.createVector(nextLine.p1.x, nextLine.p1.y);
-        let prevLineV = p5.Vector.sub(p11, p01);
-        let nextLineV = p5.Vector.sub(p12, p02);
+        let prevLineV = p5.Vector.sub(p11, p01).normalize();
+        let nextLineV = p5.Vector.sub(p12, p02).normalize();
         let cross = p5.Vector.cross(prevLineV, nextLineV);
         l.push({ value:0 });
         r.push({ value: element.d / 2 });

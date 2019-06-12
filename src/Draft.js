@@ -221,19 +221,21 @@ export default class Draft {
       let rightPart = numberOfElements - this.firstElementIndex - 1;
       let elements = this.import.elements;
       for (let i = 0; i < elements.length; i += 2) {
-        let elIndex = i <= rightPart ? i + this.firstElementIndex : numberOfElements - i - 1;
-
+        // let elIndex = i <= rightPart ? i + this.firstElementIndex : numberOfElements - i - 1;
+        let elIndex = i < this.firstElementIndex ? numberOfElements - i - 1 : i - this.firstElementIndex;
         // first point
-        let pos = flipMatrix.applyToPoint(elements[i].p0.x, elements[i].p0.y);
+        let pos = flipMatrix.applyToPoint(elements[elIndex].p0.x, elements[elIndex].p0.y);
         pos = this.negativeRotateMatrix.applyToPoint(pos.x, pos.y);
         this.sk.ellipse(pos.x, pos.y, 5);
-        this.sk.text(`${ i <= rightPart ? elIndex + 1: elIndex + 2 }`, pos.x - 20, pos.y);
+        // this.sk.text(`${ i <= rightPart ? elIndex + 1: elIndex + 2 }`, pos.x - 20, pos.y);
+        this.sk.text(`${ i < this.firstElementIndex ? i + 2: i + 1 }`, pos.x - 20, pos.y);
 
         //second point
-        pos = flipMatrix.applyToPoint(elements[i].p1.x, elements[i].p1.y);
+        pos = flipMatrix.applyToPoint(elements[elIndex].p1.x, elements[elIndex].p1.y);
         pos = this.negativeRotateMatrix.applyToPoint(pos.x, pos.y);
         this.sk.ellipse(pos.x, pos.y, 5);
-        this.sk.text(`${ i <= rightPart ? elIndex + 2: elIndex + 1 }`, pos.x - 20, pos.y);
+        // this.sk.text(`${ i <= rightPart ? elIndex + 2: elIndex + 1 }`, pos.x - 20, pos.y);
+        this.sk.text(`${ i < this.firstElementIndex ? i + 1: i + 2 }`, pos.x - 20, pos.y);
       }
       this.sk.applyMatrix(...this.negativeRotateMatrix.toArray());
       this.sk.applyMatrix(...flipMatrix.toArray());
@@ -378,9 +380,6 @@ export default class Draft {
     newCenter = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(draftCenterX, draftCenterY);
     newCursor = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(cursorX, cursorY);
 
-    console.log('cursor after flip', newCursor.x, newCursor.y);
-    console.log('axis after flip', newCenter.x, newCenter.y);
-
     if (this.transformMatrix) {
       newCenter = this.transformMatrix.clone().applyToPoint(newCenter.x, newCenter.y);
     }
@@ -392,13 +391,9 @@ export default class Draft {
       newCursor = this.negativeRotateMatrix.clone().applyToPoint(newCursor.x, newCursor.y);
     }
 
-    console.log('cursor after tran rot', newCursor.x, newCursor.y);
-    console.log('axis after tran rot', newCenter.x, newCenter.y);
-
     cursorX = newCursor.x - newCenter.x; 
     cursorY = -(newCenter.y - newCursor.y);
 
-    console.log('relativeCursor', cursorX, cursorY);
     if (!!this.collisionMap) {
       this.hoveredElement = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap);
     }
@@ -523,10 +518,20 @@ export default class Draft {
         angle = (to - from) * offset;
         radial = p5.Vector.fromAngle(this.sk.radians(from + angle), element.d / 2);
       }
+
+      let prevLine = this.drawing[elIndex - 1];
+      let nextLine = this.drawing[elIndex + 1];
+      let p01 = this.sk.createVector(prevLine.p0.x, prevLine.p0.y);
+      let p11 = this.sk.createVector(prevLine.p1.x, prevLine.p1.y);
+      let p02 = this.sk.createVector(nextLine.p0.x, nextLine.p0.y);
+      let p12 = this.sk.createVector(nextLine.p1.x, nextLine.p1.y);
+      let prevLineV = p5.Vector.sub(p11, p01).normalize();
+      let nextLineV = p5.Vector.sub(p12, p02).normalize();
+      let cross = p5.Vector.cross(prevLineV, nextLineV);
       axis = p5.Vector.add(cv, radial);
       ax = axis.x;
       ay = axis.y;
-      aa = this.sk.degrees(radial.heading()) + 90;
+      aa = cross.z < 0 ? this.sk.degrees(radial.heading()) - 90 : this.sk.degrees(radial.heading()) + 90;
     }
     return { ax, ay, aa };
   }
