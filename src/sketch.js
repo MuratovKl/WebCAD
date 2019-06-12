@@ -26,13 +26,12 @@ export const sketch = (draft, collisionDetector) => {
       sk.applyMatrix(...draft.draftTranformMatrix.toArray());
       sk.translate(draft.panX, draft.panY);
       sk.translate(draft.tmpPanX, draft.tmpPanY);
+      sk.scale(draft.currentZoom.value);
 
       sk.stroke(0, 255, 0); // green line Y
-      sk.line(0, 0, 0, 40);
+      sk.line(0, 0, 0, 40 / draft.currentZoom.value);
       sk.stroke(255, 0, 0); // red line X
-      sk.line(0, 0, 40, 0);
-
-      sk.scale(draft.currentZoom.value);
+      sk.line(0, 0, 40 / draft.currentZoom.value, 0);
 
       sk.stroke(255);
       draft.render();
@@ -44,11 +43,6 @@ export const sketch = (draft, collisionDetector) => {
   
     sk.windowResized = () => {
       sk.resizeCanvas(sk.windowWidth, sk.windowHeight);
-    };
-  
-    sk.keyPressed = () => {
-      console.log('key pressed');
-      draft.eventHandler(sk.keyCode);
     };
   }
 }

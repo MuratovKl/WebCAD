@@ -1,5 +1,4 @@
 import { Matrix } from 'transformation-matrix-js';
-import Converter from './Converter.js';
 import p5 from 'p5';
 // line: {
 //   type: 0
@@ -55,6 +54,7 @@ export default class Draft {
     this.collisionMap = null;
     this.sizesPos = [];
     this.showDimensions = false;
+    this.showNumbering = false;
     
   }
 
@@ -132,45 +132,11 @@ export default class Draft {
     console.log(this.drawing);
   }
 
-  eventHandler(key) {
-    console.log('draft event handler');
-    if(key) {
-      console.log('keyboard event');
-      if(key == this.sk.ESCAPE) {
-        this.curStage = 0;
-        this.tempEl = 0;
-        this.elements = [[], []];
-      } else if(key == this.sk.ENTER) {
-          if(this.curStage == 0) {
-            this.curStage = 1;
-            this.tempEl = 0;
-            this.setRounding();
-          }
-      }
-    } else {
-      console.log('mouse event');
-      if(this.curTool === 0 || this.curStage !== 0) {
-        return;
-      } else if(this.curTool === 1) {
-        if(this.tempEl === 0) {
-          this.tempEl = {
-            p0: this.sk.createVector(this.sk.mouseX, this.sk.mouseY)
-          };
-        } else {
-          let p1 = this.sk.createVector(this.sk.mouseX, this.sk.mouseY);
-          this.tempEl.p1 = p1;
-          this.elements[0].push(Object.assign({}, this.tempEl));
-          this.tempEl = {
-            p0: p1
-          };
-        }
-      }
-    }
-  }
-
   render() {
     if (!!this.tmpEl) {
-      let invertMatrix = this.draftTranformMatrix.inverse();
+      let invertMatrix = this.draftTranformMatrix.clone()
+        .translate(this.panX + this.tmpPanX, this.panY + this.tmpPanY)
+        .scaleU(this.currentZoom.value).inverse();
       let { x, y } = invertMatrix.applyToPoint(this.sk.mouseX, this.sk.mouseY);
       this.sk.line(this.tmpEl.p0.x, this.tmpEl.p0.y, x, y);
     }
@@ -187,10 +153,10 @@ export default class Draft {
     }
     // draw imported profile
     this.renderProfile();
-    // draw profile information
-    for (let pos of this.sizesPos) {
-      this.sk.ellipse(pos.x, pos.y, 10);
-    }
+    // draw profile information placeholders
+    // for (let pos of this.sizesPos) {
+    //   this.sk.ellipse(pos.x, pos.y, 10);
+    // }
     // drawing points
     for (let i = 0; i < this.drawingDots.length; i++) {
       if (i === this.drawingAxisCenterHovered || i === this.drawingAxisCenterSelected.index / 0.5 - 2) {
@@ -202,6 +168,7 @@ export default class Draft {
     }
 
     this.renderProfileParams();
+    this.renderProfileNumbers();
 
     //render collision map of drawing
     // this.renderDrawingCollisionMap();
@@ -214,17 +181,65 @@ export default class Draft {
     if (this.import === null) {
       return;
     }
-    // let numberOfElements = this.import.elements.length;
-    // let rightPart = numberOfElements - this.firstElementIndex - 1;
-    // let elements = this.import.elements;
-    // for (let i = 0; i < this.sizesPos.length; i++) {
-    //   let elIndex = i <= rightPart ? i : numberOfElements - i - 1;
-    //   if (elements[i].type === 0) {
-    //     this.sk.text(`L: ${ this.l[elIndex] }`, this.sizesPos[i].x, this.sizesPos[i].y);
-    //   } else {
+    if (this.showDimensions) {
+      let flipMatrix = Matrix.from(1, 0, 0, -1, 0, 0);
+      this.sk.textSize(12);
+      this.sk.fill(255);
+      this.sk.strokeWeight(1 / this.currentZoom.value);
+      this.sk.applyMatrix(...flipMatrix.toArray());
+      this.sk.applyMatrix(...this.rotateMatrix.toArray());
+      let numberOfElements = this.import.elements.length;
+      let rightPart = numberOfElements - this.firstElementIndex - 1;
+      let elements = this.import.elements;
+      for (let i = 0; i < this.sizesPos.length; i++) {
+        let elIndex = i <= rightPart ? i + this.firstElementIndex : numberOfElements - i - 1;
+        let { x, y } = flipMatrix.applyToPoint(this.sizesPos[i].x, this.sizesPos[i].y);
+        let pos = this.negativeRotateMatrix.applyToPoint(x, y);
+        if (elements[i].type === 0) {
+          this.sk.text(`L: ${ this.l[elIndex].toFixed(2) }`, pos.x, pos.y, 40);
+        } else {
+          this.sk.text(`R: ${ this.r[elIndex].toFixed(2) }\n A: ${ this.a[elIndex].toFixed(2) }`, pos.x, pos.y, 40);
+        }
+      }
+      this.sk.applyMatrix(...this.negativeRotateMatrix.toArray());
+      this.sk.applyMatrix(...flipMatrix.toArray());
+    }
+  }
 
-    //   }
-    // }
+  renderProfileNumbers() {
+    if (this.import === null) {
+      return;
+    }
+    if (this.showNumbering) {
+      let flipMatrix = Matrix.from(1, 0, 0, -1, 0, 0);
+      this.sk.textSize(12);
+      this.sk.fill(255);
+      this.sk.strokeWeight(1 / this.currentZoom.value);
+      this.sk.applyMatrix(...flipMatrix.toArray());
+      this.sk.applyMatrix(...this.rotateMatrix.toArray());
+      let numberOfElements = this.import.elements.length;
+      let rightPart = numberOfElements - this.firstElementIndex - 1;
+      let elements = this.import.elements;
+      for (let i = 0; i < elements.length; i += 2) {
+        // let elIndex = i <= rightPart ? i + this.firstElementIndex : numberOfElements - i - 1;
+        let elIndex = i < this.firstElementIndex ? numberOfElements - i - 1 : i - this.firstElementIndex;
+        // first point
+        let pos = flipMatrix.applyToPoint(elements[elIndex].p0.x, elements[elIndex].p0.y);
+        pos = this.negativeRotateMatrix.applyToPoint(pos.x, pos.y);
+        this.sk.ellipse(pos.x, pos.y, 5);
+        // this.sk.text(`${ i <= rightPart ? elIndex + 1: elIndex + 2 }`, pos.x - 20, pos.y);
+        this.sk.text(`${ i < this.firstElementIndex ? i + 2: i + 1 }`, pos.x - 20, pos.y);
+
+        //second point
+        pos = flipMatrix.applyToPoint(elements[elIndex].p1.x, elements[elIndex].p1.y);
+        pos = this.negativeRotateMatrix.applyToPoint(pos.x, pos.y);
+        this.sk.ellipse(pos.x, pos.y, 5);
+        // this.sk.text(`${ i <= rightPart ? elIndex + 2: elIndex + 1 }`, pos.x - 20, pos.y);
+        this.sk.text(`${ i < this.firstElementIndex ? i + 1: i + 2 }`, pos.x - 20, pos.y);
+      }
+      this.sk.applyMatrix(...this.negativeRotateMatrix.toArray());
+      this.sk.applyMatrix(...flipMatrix.toArray());
+    }
   }
 
   renderProfile() {
@@ -292,7 +307,7 @@ export default class Draft {
   renderCollisionMap() {
     if (!!this.collisionMap) {
       for (let contour of this.collisionMap) {
-        if (contour.length === 4) {
+        if (contour[0].length === 2) {
           this.sk.beginShape();
           for (let point of contour) {
             this.sk.vertex(point[0], point[1]);
@@ -312,13 +327,9 @@ export default class Draft {
   }
 
   makeProfileTransformMatrices(axisX, axisY, axisAngle) {
-    if (axisX || axisY) {
-      this.transformMatrix = Matrix.from(1, 0, 0, 1, axisX, axisY);
-    }
-    if (axisAngle) {
-      this.rotateMatrix = new Matrix().rotateDeg(axisAngle);
-      this.negativeRotateMatrix = new Matrix().rotateDeg(-axisAngle);
-    }
+    this.transformMatrix = Matrix.from(1, 0, 0, 1, axisX, axisY);
+    this.rotateMatrix = new Matrix().rotateDeg(axisAngle);
+    this.negativeRotateMatrix = new Matrix().rotateDeg(-axisAngle);
   }
 
   mouseMovedHandler() {
@@ -364,35 +375,37 @@ export default class Draft {
     let draftCenterY = this.sk.height / 2 - this.panY - this.tmpPanY;
     let newCenter, newCursor;
 
-    let scaleMatrix = new Matrix().scale(this.currentZoom.value, this.currentZoom.value);
+    let scaleMatrix = new Matrix().scaleU(this.currentZoom.value);
 
     newCenter = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(draftCenterX, draftCenterY);
     newCursor = Matrix.from(1, 0, 0, -1, 0, 0).applyToPoint(cursorX, cursorY);
 
-
     if (this.transformMatrix) {
-      newCenter = this.transformMatrix.applyToPoint(newCenter.x, newCenter.y);
+      newCenter = this.transformMatrix.clone().applyToPoint(newCenter.x, newCenter.y);
     }
+    // newCursor = scaleMatrix.applyToPoint(newCursor.x, newCursor.y);
+
+
     if (this.negativeRotateMatrix) {
-      newCenter = this.negativeRotateMatrix.applyToPoint(newCenter.x, newCenter.y);
-      newCursor = this.negativeRotateMatrix.applyToPoint(newCursor.x, newCursor.y);
+      newCenter = this.negativeRotateMatrix.clone().applyToPoint(newCenter.x, newCenter.y);
+      newCursor = this.negativeRotateMatrix.clone().applyToPoint(newCursor.x, newCursor.y);
     }
 
     cursorX = newCursor.x - newCenter.x; 
-    cursorY = -(newCenter.y - newCursor.y); 
+    cursorY = -(newCenter.y - newCursor.y);
 
-    console.log('relativeCursor', cursorX, cursorY);
     if (!!this.collisionMap) {
       this.hoveredElement = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.collisionMap);
     }
-
     if (!!this.drawingCollisionMap) {
       this.drawingAxisCenterHovered = this.collisionDetector.checkCollisions({ x: cursorX, y: cursorY }, this.drawingCollisionMap);
     }
   }
 
   drawElement() {
-    let invertMatrix = this.draftTranformMatrix.inverse();
+    let invertMatrix = this.draftTranformMatrix.clone()
+      .translate(this.panX + this.tmpPanX, this.panY + this.tmpPanY)
+      .scaleU(this.currentZoom.value).inverse();
     let { x, y } = invertMatrix.applyToPoint(this.sk.mouseX, this.sk.mouseY);
     let point = this.sk.createVector(x, y);
     // if line not started
@@ -421,7 +434,11 @@ export default class Draft {
     }
 
     if (!!this.drawingCollisionMap) {
-      this.drawingAxisCenterSelected.index = (this.drawingAxisCenterHovered + 2) * 0.5;
+      if (this.drawingAxisCenterHovered === -1) {
+        this.drawingAxisCenterSelected.index = -1;
+      } else {
+        this.drawingAxisCenterSelected.index = (this.drawingAxisCenterHovered + 2) * 0.5;
+      }
     }
   }
   // point at the ends of drawing elements
@@ -451,12 +468,14 @@ export default class Draft {
 
       } else {
         let cv = this.sk.createVector(curEl.c.x, curEl.c.y);
-        let angle = Math.abs(curEl.to - curEl.from) / 2;
-        console.log(curEl.from, curEl.to);
-        console.log(angle);
-        let radial = p5.Vector.fromAngle(this.sk.radians(curEl.from + angle), curEl.d / 2);
+        let from = curEl.from < 0 ? 360 + curEl.from : curEl.from;
+        let to = curEl.to < 0 ? 360 + curEl.to : curEl.to;
+        if (to < from) {
+          to += 360;
+        }
+        let angle = (to - from) / 2;
+        let radial = p5.Vector.fromAngle(this.sk.radians(from + angle), curEl.d / 2);
         let point = p5.Vector.add(cv, radial);
-
         this.drawingDots.push({ x: point.x, y:point.y });
       }
     }
@@ -464,10 +483,8 @@ export default class Draft {
 
   calcDrawingAxisPos() {
     let ax, ay, aa;
-    let elIndex = Math.floor(this.drawingAxisCenterSelected.index - 1);
+    let elIndex = Math.min(Math.floor(this.drawingAxisCenterSelected.index - 1), this.drawing.length - 1);
     let element = this.drawing[elIndex];
-    console.log(elIndex);
-    console.log(element);
     if (element.type === 0) {
       let p0v = this.sk.createVector(element.p0.x, element.p0.y);
       let p1v = this.sk.createVector(element.p1.x, element.p1.y);
@@ -489,17 +506,32 @@ export default class Draft {
     } else {
       let radial, axis, angle;
       let cv = this.sk.createVector(element.c.x, element.c.y);
+      let from = element.from < 0 ? 360 + element.from : element.from;
+      let to = element.to < 0 ? 360 + element.to : element.to;
+      if (to < from) {
+        to += 360;
+      }
       if (this.drawingAxisCenterSelected.index === elIndex + 1) {
-        radial = p5.Vector.fromAngle(this.sk.radians(element.to), element.d / 2);
+        radial = p5.Vector.fromAngle(this.sk.radians(from), element.d / 2);
       } else {
         let offset = this.drawingAxisCenterSelected.index - 1 - elIndex;
-        angle = Math.abs(element.to - element.from) * offset;
-        radial = p5.Vector.fromAngle(this.sk.radians(element.to - angle), element.d / 2);
+        angle = (to - from) * offset;
+        radial = p5.Vector.fromAngle(this.sk.radians(from + angle), element.d / 2);
       }
+
+      let prevLine = this.drawing[elIndex - 1];
+      let nextLine = this.drawing[elIndex + 1];
+      let p01 = this.sk.createVector(prevLine.p0.x, prevLine.p0.y);
+      let p11 = this.sk.createVector(prevLine.p1.x, prevLine.p1.y);
+      let p02 = this.sk.createVector(nextLine.p0.x, nextLine.p0.y);
+      let p12 = this.sk.createVector(nextLine.p1.x, nextLine.p1.y);
+      let prevLineV = p5.Vector.sub(p11, p01).normalize();
+      let nextLineV = p5.Vector.sub(p12, p02).normalize();
+      let cross = p5.Vector.cross(prevLineV, nextLineV);
       axis = p5.Vector.add(cv, radial);
       ax = axis.x;
       ay = axis.y;
-      aa = angle; //radial.heading();
+      aa = cross.z < 0 ? this.sk.degrees(radial.heading()) - 90 : this.sk.degrees(radial.heading()) + 90;
     }
     return { ax, ay, aa };
   }
@@ -511,7 +543,6 @@ export default class Draft {
         this.setRoundings();
         // reverse array if start.x > end.x
         if (this.drawing[0].p0.x > this.drawing[this.drawing.length - 1].p1.x) {
-          this.drawing.reverse();
           this.drawing.reversed = true;
         }
         this.calcDrawingPoints();
@@ -524,6 +555,7 @@ export default class Draft {
   }
   // position for information about profile parts
   calcInfoPositions() {
+    this.sizesPos = [];
     let numberOfElements = this.import.elements.length;
     let rightPart = numberOfElements - this.firstElementIndex - 1;
     let elements = this.import.elements;

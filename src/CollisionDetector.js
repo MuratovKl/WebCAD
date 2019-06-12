@@ -88,7 +88,7 @@ export default class CollisionDetector {
 
   checkCollisions(point, collisionMap) {
     for (let i = 0; i < collisionMap.length; i++) {
-      if (collisionMap[i].length === 4) {
+      if (collisionMap[i][0].length === 2) {
         if (this.isPointInPolygon(point, collisionMap[i])) {
           return i;
         }

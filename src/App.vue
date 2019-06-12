@@ -7,7 +7,7 @@
         class="btn"
         id="draw-btn"
       >
-        Нарисовать профиль
+        Построить профиль
       </button>
       <button
         class="btn"
@@ -16,6 +16,14 @@
       >
         Экспертный режим
       </button>
+      <label class="toggle-label">
+        <span >Размеры</span>
+        <input @input="enableProfileDimensions" type="checkbox">
+      </label>
+      <label class="toggle-label">
+        <span >Нумерация</span>
+        <input @input="enableProfileNumbering" type="checkbox">
+      </label>
     </div>
     <!-- popup for current hints -->
     <div id="hint-popup">
@@ -358,6 +366,9 @@ export default {
       let l = this.L.map((el) => el.value);
       let r = this.R.map((el) => el.value);
       let a = this.A.map((el) => el.value);
+      this.draft.l = l;
+      this.draft.r = r;
+      this.draft.a = a;
 
       if (elToChange === (Math.floor(this.axisCenter) - 1)) {
         this.importedProfile = Converter.vectorsToPrimitives(l, r, a, this.axisCenter, this.axisX, this.axisY);
@@ -366,6 +377,7 @@ export default {
         Converter.recalcProfile(l, r, a, this.axisCenter, this.importedProfile, elToChange);
       }
       this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
+      this.draft.calcInfoPositions();
       this.closePartParams();
     },
     startDrawing() {
@@ -401,6 +413,22 @@ export default {
       this.draft.collisionMap = this.collisionDetector.buildCollisionMap(this.importedProfile.elements);
       this.draft.firstElementIndex = Math.floor(this.axisCenter) - 1;
       this.draft.calcInfoPositions();
+    },
+    enableProfileDimensions(event) {
+      if (event.target.checked) {
+        console.log('checked');
+        this.draft.showDimensions = true;
+      } else {
+        this.draft.showDimensions = false;
+      }
+    },
+    enableProfileNumbering() {
+      if (event.target.checked) {
+        console.log('checked');
+        this.draft.showNumbering = true;
+      } else {
+        this.draft.showNumbering = false;
+      }
     }
   }
 }
@@ -427,7 +455,7 @@ export default {
     left: 0;
     padding: 20px;
 
-    & button {
+    & button, label {
       margin-bottom: 10px;
     }
   }
@@ -622,5 +650,21 @@ export default {
       color: white;
     }
   }
+
+  .toggle-label {
+    display: block;
+    text-align: center;
+    height: 30px;
+    width: auto;
+    padding: 5px;
+    box-sizing: border-box;
+    background-color: white;
+    border: 1px solid #c3e3ff;
+    font-size: 12px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 200ms ease;
+  }
+
 
 </style>
